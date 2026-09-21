@@ -1,114 +1,197 @@
 # DeskVeil
 
-**Zero-friction visual privacy.** 离开电脑时自动遮住所有屏幕，回来时自动解除。不会锁电脑。
+**Zero-friction visual privacy for Windows.**
 
-> DeskVeil hides your screen. Windows Lock secures your computer.
+DeskVeil automatically covers every display with live frosted glass when you step away, then reveals your desktop when you return. Grab a drink, collect a delivery, or chat with a colleague while your apps keep running underneath.
 
-DeskVeil 用于拿水、拿快递、和同事短暂交谈时的视觉遮挡。它不是安全软件，不能防止 Ctrl+Alt+Del、进程终止、远程访问、管理员绕过或恶意攻击。敏感场景请使用 **Win + L**。
+## Features
 
-## 开始使用（Windows 10 / 11）
+- **Automatic presence detection** with local MediaPipe face tracking.
+- **All-display coverage**, including the taskbar and newly connected monitors.
+- **Live frosted glass** that follows changing windows and playing videos.
+- **Smooth 200 ms transitions** with high-precision color blending and fine, stationary dithering.
+- **Mouse and touchpad input suppression** with a hidden pointer while covered.
+- **Tray controls** available through either left-click or right-click.
+- **Instant reveal shortcuts** and a ten-minute snooze.
+- **Shared camera capture with [peeker](https://github.com/silhovette/peeker)**.
 
-若已有构建产物，双击 `dist/DeskVeil/DeskVeil.exe`。分发时必须保留整个 DeskVeil 文件夹。
+## Getting started
 
-从源码启动（Python 3.11 x64）：
+### Run from source
+
+Use Windows 10 or 11 and Python 3.11 x64. Live desktop capture uses the capture-exclusion API available in Windows 10 version 2004 and later.
 
 ```powershell
 git clone https://github.com/silhovette/deskveil.git
 cd deskveil
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe tools\download_model.py
 .\.venv\Scripts\python.exe main.py
 ```
 
-环境准备好后，可以双击 `run.vbs` 无控制台启动。应用驻留系统托盘，可能藏在 Windows 托盘的上箭头中。
+The repository includes the MediaPipe model in `models/face_landmarker.task`. To download a fresh copy:
 
-**紧急解除：Ctrl + Alt + Shift + V**。立即显示桌面，并暂停监测 10 分钟。如果快捷键注册失败（包括重复启动），应用会说明原因并停止启动，不会开始盖屏。
+```powershell
+.\.venv\Scripts\python.exe tools\download_model.py
+```
 
-**解除但继续监测：Ctrl + V**。仅在遮罩显示时接管该快捷键，解除后恢复普通粘贴。立即解除，不暂停、不释放摄像头，重新开始离开确认；若仍检测不到人脸，连续 2 秒后会再次盖屏。其他程序若已占用该全局快捷键，可继续用紧急快捷键解除。
+After setup, double-click `run.vbs` to launch directly into the system tray. The icon may appear in the tray overflow menu.
 
-托盘菜单：
+### Build a Windows app
 
-- **启用 DeskVeil**：取消勾选立即解除并停止检测，再次勾选恢复；左键和右键点击图标都能打开菜单。
-- **Cover Now**：立即遮住全部屏幕。手动遮罩后须先检测到离开、再检测到稳定返回才自动解除；如果不打算起身，使用紧急快捷键解除。
-- **Snooze for 10 min**：解除遮罩、暂停自身监测并停止自己的相机读取。若 peeker 仍在监测，它会继续使用相机；两者都暂停后才能把相机完全交给视频会议应用。
-- **Resume Monitoring**：提前结束暂停，从新样本重新开始判断。
-- **Camera Preview**：查看实时画面及人脸框，用于调整坐姿和摄像头；不保存画面。盖屏时会关闭预览。
-- **Exit**：解除遮罩并退出。
+```powershell
+.\build.bat
+```
 
-托盘图标：青色表示正常，灰色表示暂停，黄色表示摄像头、模型不可用或缺少新数据。摄像头故障每 5 秒重试；运行中读取一帧耗时超过 0.8 秒时，该帧不参与判断，并释放、重开相机会话；打开摄像头后的首帧允许较慢，丢弃该帧后继续预热，避免反复重开。日志会记录监测健康状态变化和样本延迟，便于排查状态闪烁。
+The build script installs the packaging dependencies and creates `dist/DeskVeil/DeskVeil.exe`. Distribute the complete `dist/DeskVeil` folder, and launch the executable inside it.
 
-## V1 行为
+## Controls
 
-摄像头默认 640 × 360，CPU MediaPipe Face Landmarker 每秒推理 5 次。后台持续读取相机以减少驱动缓冲延迟；仅预览开启时构建预览图像。
+Left-click or right-click the tray icon to open the menu.
 
-| 当前情况 | 行为 |
+| Control | Action |
 | --- | --- |
-| 合适位置的人脸消失不足 2 秒 | 不显示任何 UI，不遮罩 |
-| 连续 2 秒检测不到合适人脸 | 盖住所有显示器 |
-| 遮罩后连续 0.6 秒检测到合适人脸 | 解除遮罩 |
-| 遮罩后短暂检出人脸 | 保持遮罩 |
-| 摄像头/模型故障，或推理间隔超过 0.8 秒 | 清空确认计时，不将缺数据视为离开 |
-| 已经盖屏后摄像头故障 | 保留遮罩；紧急快捷键仍可解除 |
-| 暂停到期 | 重新打开摄像头，从零开始确认离开 |
-| 盖屏时插入显示器 | 新屏立即使用模糊遮罩 |
+| Enable DeskVeil | Turn monitoring on or off. Turning it off immediately reveals the desktop and restores mouse input. |
+| Cover Now | Cover every display. Automatic reveal follows a detected departure and a stable return. |
+| Snooze for 10 min | Reveal the desktop and pause monitoring for ten minutes. |
+| Resume Monitoring | Resume immediately with a fresh presence timer. |
+| Camera Preview | Show the live camera image and face boxes for positioning. |
+| Exit | Reveal the desktop and close DeskVeil. |
 
-“合适人脸”指边框面积至少占画面 3.5%，中心距画面中心不超过 0.45（归一化画面坐标的欧氏距离）。此启发式用于离开和返回判断，可排除一部分远处或边缘的人脸，**不是主人身份识别**。别人坐到你的座位也可能解除遮罩，背后的人脸也可能使应用继续判定有人。
+The enable toggle applies to the current session. While disabled, manual cover and camera preview are inactive.
 
-状态机独立于 Qt：`PRESENT → PENDING_AWAY → COVERED → PENDING_RETURN → PRESENT`，另有 `SNOOZED`。缺少数据只会取消正在进行的确认，不会凭时间单独盖屏。计时使用单调时钟；相机线程通过最新样本邮箱交给 UI，旧样本不会积压后触发动作。
+| Shortcut | Action |
+| --- | --- |
+| **Ctrl + V** while covered | Reveal immediately and continue monitoring with a fresh departure timer. |
+| **Ctrl + Alt + Shift + V** | Reveal immediately and snooze for ten minutes. |
 
-每个 QScreen 使用无边框、置顶、不抢焦点、阻挡鼠标的全屏亚克力风格模糊窗口，支持负坐标、分辨率变化和热插拔。Windows 原生窗口定位使用显示器的完整物理边界（包含任务栏），遮罩期间持续维持置顶。遮罩没有文字或图标，点击不会解除。遮罩期间在内存中持续采集各屏幕的当前画面，缩小并模糊，再合成均匀的冷色磨砂材质；目标刷新率为 30 FPS（实际随屏幕数量与性能变化），解除后停止采集并清除画面，不保存到磁盘。不依赖 Windows 的透明效果设置。采集失败时保留最近的模糊画面；首次采集失败则使用纯色遮罩。模糊保留窗口布局、颜色及部分内容轮廓，不等同于完全遮黑。
+On the visible desktop, Ctrl + V retains its normal paste behavior. Both reveal shortcuts act immediately.
 
-实时采集使用 Windows 10 2004+ 的 [WDA_EXCLUDEFROMCAPTURE](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity) 排除遮罩自身，避免循环采集遮罩而越变越糊。其他使用系统捕获接口的录屏或共享屏幕也可能看到未遮挡的桌面；DeskVeil 仅提供本地屏幕的视觉遮挡。系统不支持时保留静态遮罩并记录日志。
+Tray colors indicate the current state: **teal** for monitoring, **gray** for paused or disabled, and **amber** while waiting for camera or model data.
 
-遮罩期间隐藏系统指针，并用 Windows 鼠标钩子拦截鼠标和触控板产生的移动、点击、拖动和滚轮输入，不阻止键盘快捷键。自动解除、Ctrl+V、紧急解除和正常退出都会撤销钩子；进程强制结束后由系统清理，不会留下持久的鼠标位置限制。应用不暂停其他进程、不发送媒体暂停指令、不抢焦点；遮罩采用接近完全不透明的分层窗口，避免后台窗口因完全被遮挡而停止绘制。亮度与模糊可在 `config.py` 的 `GLASS_DIM_ALPHA`、`GLASS_BLUR_SIGMA`、`GLASS_MAX_EDGE` 调整。
+## Presence detection
 
-自动覆盖和解除渐变 200 ms，渐变期间桌面会短暂可见。两种快捷键解除均不等待动画。
+DeskVeil uses face size and position to decide whether someone is seated in front of the computer.
 
-普通桌面窗口无法保证覆盖 Windows 安全桌面、UAC、某些独占全屏应用或其他更高层级窗口。不会拦截键盘、停止后台应用或隐藏远程桌面数据。遮罩时原应用仍可能接收键盘输入。
+- A face qualifies when its bounding box covers at least **3.5% of the camera image** and its center is within **0.45 normalized units** of the image center.
+- **Two seconds** of continuous absence activates the veil.
+- **0.6 seconds** of continuous presence reveals the desktop.
+- Brief detection dropouts are absorbed by the confirmation timers.
+- Interrupted camera data resets the confirmation timers. An active veil remains visible until presence returns or a reveal shortcut is used.
 
-## 配置与隐私
+The camera defaults to **640 × 360**, with **5 face-inference passes per second**. Presence timing runs independently of the interface through a pure state machine:
 
-直接修改 `config.py`；V1 没有配置窗口、人脸注册、身份识别、自动锁屏或 Windows Hello 集成。
+```text
+PRESENT -> PENDING_AWAY -> COVERED -> PENDING_RETURN -> PRESENT
 
-摄像头画面、检测结果和用于模糊的桌面画面仅驻留本机内存，无上传、录像、图片文件、人脸 embedding 或持久化身份信息。运行期间无网络请求。安装脚本会从 Google 下载 MediaPipe 模型；已有模型可直接放在 `models/face_landmarker.task`。
+SNOOZED (temporary pause)
+```
 
-日志只记录状态及异常类型，位于 `%LOCALAPPDATA%/DeskVeil/logs/deskveil.log`，有大小轮换，不记录图像和人脸坐标。检测和预览实现参考同目录下的 peeker；DeskVeil 的安装与运行不依赖 peeker。
+Snoozing can be entered from any state. Resuming starts a fresh detection cycle.
 
-DeskVeil 与更新后的 peeker 通过本机命名共享内存共用最新摄像头画面。Windows 命名互斥量保证只有一个客户端打开实体设备，另一客户端读取完整的新帧；人脸检测、状态机和预览仍各自独立。没有额外服务、网络端口或画面文件。采集方暂停或退出后，另一个客户端自动接管，设备重开期间可能短暂显示等待并重置检测确认计时。两者都停止后释放实体设备。两个程序都必须升级到共享读取版本；各自单独运行不依赖另一个程序。
+## Live glass rendering
 
-这不保证与 Zoom / Teams 等第三方应用共用摄像头，V1 不自动检测视频会议。开会前应同时暂停 DeskVeil 和 peeker。摄像头完全遮住但仍正常输出黑色画面，与“没有检测到人脸”无法区分，可能在 2 秒后盖屏；请用紧急快捷键解除。
+Each display gets a full-screen window with a uniform, cool-toned frosted material. Desktop animation and video playback continue underneath, and the foreground application keeps its focus.
 
-## 验证与构建
+Capture, blur, and composition run in a background worker. The rendering pipeline:
+
+1. Captures the desktop with reusable Windows capture resources.
+2. Resizes the image and reuses the previous result when the pixels are unchanged.
+3. Blurs and blends the material at 16-bit precision per color channel.
+4. Composes the complete frame at the display's physical resolution.
+5. Applies fixed, high-frequency dithering during final display conversion.
+6. Delivers the latest completed frame to the interface through a coalesced notification.
+
+The target refresh rate is **30 FPS**, with throughput depending on display resolution and hardware. Capture stops when the veil is dismissed. The fixed dither pattern gives dark gradients a fine texture while remaining stable across frames.
+
+## Configuration
+
+Edit `config.py` to adjust the defaults:
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `CAMERA_INDEX` | `0` | Camera device |
+| `FRAME_WIDTH` / `FRAME_HEIGHT` | `640` / `360` | Requested camera resolution |
+| `INFERENCE_FPS` | `5` | Face-inference frequency |
+| `AWAY_CONFIRM_TIME` | `2.0` | Departure confirmation, in seconds |
+| `RETURN_CONFIRM_TIME` | `0.6` | Return confirmation, in seconds |
+| `MIN_RETURN_FACE_RATIO` | `0.035` | Minimum face area relative to the camera image |
+| `MAX_RETURN_CENTER_DISTANCE` | `0.45` | Maximum normalized distance from image center |
+| `VEIL_FADE_MS` | `200` | Automatic transition duration |
+| `GLASS_FPS` | `30` | Target glass refresh rate |
+| `GLASS_MAX_EDGE` | `960` | Working blur resolution |
+| `GLASS_BLUR_SIGMA` | `5.0` | Blur strength |
+| `GLASS_DIM_ALPHA` | `105` | Material darkening |
+| `SNOOZE_MINUTES` | `10` | Snooze duration |
+
+Restart the source app after changing configuration. Rebuild to apply changes to a packaged executable.
+
+## Local processing and camera sharing
+
+Camera frames, face detection, and desktop composition are processed locally in memory. The model is bundled for offline inference. Image buffers are cleared when their monitoring or cover session ends.
+
+DeskVeil and peeker can share one physical camera through Windows named shared memory. One client captures frames, and the other reads the latest frame. Each app runs its own detection logic. When the capturing client pauses or exits, the other takes over automatically.
+
+Use the shared-capture versions of both apps. Pausing both releases the physical camera for a video call. DeskVeil also runs independently.
+
+Operational logs are stored at:
+
+```text
+%LOCALAPPDATA%/DeskVeil/logs/deskveil.log
+```
+
+Logs contain monitoring state and diagnostic information, with automatic size-based rotation.
+
+## Development and testing
+
+Run the automated tests:
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe tools\camera_smoke.py
-.\build.bat
-.\.venv\Scripts\python.exe tools\frozen_smoke.py
-.\.venv\Scripts\python.exe tools\shared_camera_smoke.py
-.\.venv\Scripts\python.exe tools\coexist_apps_smoke.py
-.\.venv\Scripts\python.exe tools\mouse_exit_smoke.py
 ```
 
-自动测试覆盖时间滞后、缺数据、长推理间隔、暂停/恢复、手动遮罩、相机异常、窗口覆盖及模拟显示器热插拔。`camera_smoke.py` 实际打开摄像头并运行 10 次模型推理，不展示或保存画面。
+The test suite covers presence timing, camera interruptions, manual controls, hotkeys, display management, asynchronous frame delivery, and final color composition.
 
-`tools/windows_smoke.py` 会短暂盖住实际显示器，验证 Windows 窗口属性及紧急快捷键的原生消息处理，然后退出。`tools/frozen_smoke.py` 验证打包程序实际加载模型、连续 12 秒相机监测、暂停释放摄像头及正常退出。
+Additional tools exercise the actual Windows desktop and camera:
 
-运行 `tools/shared_camera_smoke.py` 前先退出两个应用。它会启动两个相机客户端，验证并发画面、采集方退出后的接管、客户端重新加入以及最后的相机释放，不显示或保存画面。
+| Tool | Checks |
+| --- | --- |
+| `tools/camera_smoke.py` | Camera capture and ten model-inference passes |
+| `tools/windows_smoke.py` | Display coverage, native shortcuts, tray controls, and mouse handling |
+| `tools/frozen_smoke.py` | Packaged app startup, sustained monitoring, and shutdown |
+| `tools/live_glass_smoke.py` | Changing desktop content, focus, and input suppression |
+| `tools/video_glass_smoke.py` | Video playback and changing frames beneath the veil |
+| `tools/shared_camera_smoke.py` | Concurrent clients, camera handover, and release |
+| `tools/coexist_apps_smoke.py` | Packaged DeskVeil and peeker sharing the camera |
+| `tools/mouse_exit_smoke.py` | Mouse input restoration after process exit |
+| `tools/glass_quality.py` | Synthetic gradient comparison of the previous and current materials |
+| `tools/glass_compute_benchmark.py` | Pixel comparison and blur-processing timings |
+| `tools/glass_performance.py` | Composition updates, painting, animation intervals, and interface latency |
 
-`tools/coexist_apps_smoke.py` 会启动两个打包后的 EXE，验证共同监测和双向接管，最后正常退出测试启动的程序。`tools/mouse_exit_smoke.py` 验证鼠标拦截和测试进程被强制结束后的系统清理，并恢复原指针位置。
+Run desktop and camera integration tools with the regular DeskVeil instance closed. The coexistence tool uses the peeker build in the sibling `peeker` directory; the shared-camera test starts its own camera clients.
 
-首次日用建议先熟悉紧急快捷键，再测试起身返回、低头、转身、暗光，以及实际多显示器插拔。真实摄像头误判率、不同独占全屏程序和设备热插拔仍需要在目标硬件上体验验证。
+For controlled rendering measurements:
 
-`tools/live_glass_smoke.py` 验证遮罩下画面持续变化、前台焦点保持，以及鼠标移动、点击和滚轮被拦截。`tools/video_glass_smoke.py` 播放临时生成的测试视频，验证盖屏后播放进度和模糊画面继续更新；测试视频自动清理。
+```powershell
+.\.venv\Scripts\python.exe tools\glass_performance.py --synthetic
+.\.venv\Scripts\python.exe tools\glass_performance.py --synthetic --dynamic
+```
 
-托盘图标支持左键、右键打开同一个菜单。勾选“启用 DeskVeil”开启检测；取消勾选会立即解除遮罩、恢复鼠标、停止检测并释放 DeskVeil 的摄像头连接，保持关闭直到再次勾选（本次运行内有效）。关闭期间 Cover Now 和 Camera Preview 不可用；10 分钟 Snooze 仍作为单独的临时暂停功能。
+## Project layout
 
-实时玻璃采集与模糊在独立工作线程执行，复用 Windows 桌面 DC 与位图；界面只读取最新完成的一帧，不排队堆积旧帧。画面像素不变时复用处理结果，合成工作缓冲区重复使用。动画保留原有 200 ms 时长；立即解除仍不等待采集线程。`tools/glass_performance.py` 可测量本机采集调度、绘制、动画间隔和界面延迟，不保存桌面图像。
+```text
+deskveil/
+  main.py                 Application lifecycle and controls
+  config.py               Runtime defaults
+  detection/              Camera sharing, face detection, presence state machine
+  ui/                     Tray, preview, hotkeys, live glass rendering
+  assets/                 Icons
+  models/                 MediaPipe model and source information
+  tests/                  Automated tests
+  tools/                  Integration tests, diagnostics, and build helpers
+  build.bat               Windows packaging
+  DeskVeil.spec           PyInstaller specification
+  run.vbs                 Tray-only source launcher
+```
 
-模糊、放大和材质合成使用每通道 16 位精度，在后台线程合成为显示器物理分辨率的完整画面。移除大范围径向高光与多层渐变，采用均匀冷色磨砂材质。只在最终转换为 8 位显示画面时应用固定的高频三角分布抖动，避免先加颗粒再被缩放或合成取整抹掉。抖动固定在物理像素，不随帧变化；界面只绘制最终画面，不再追加色调层。模糊半径、暗化参数和动画时长保持不变。
-
-进一步优化：先对比紧凑的缩小画面，仅在像素变化时转换为 16 位色彩；OpenCV 直接写入 Qt 拥有的结果缓冲区，省去一次整帧复制。最新帧通过合并通知交给界面，不再每 8 ms 轮询。`tools/glass_compute_benchmark.py` 用合成画面比较优化前后的像素结果和计算耗时；`tools/glass_performance.py --synthetic`（可加 `--dynamic`）用于受控性能测量，加 `--reference` 可对照前一实现的计算与轮询方式。
-
-`tools/glass_quality.py` 生成仅含合成暗色渐变的旧版/新版对照图（左旧右新）。`tests/test_glass_compositor.py` 验证最终显示保留小于一个色阶的平均亮度、固定抖动不闪烁、均匀底色不产生人工环状亮度带，以及解除时清空合成画面。
+Detection and preview work originated from [peeker](https://github.com/silhovette/peeker). Model source information is available in [models/README.md](models/README.md).
