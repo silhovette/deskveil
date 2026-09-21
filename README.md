@@ -75,7 +75,7 @@ DeskVeil uses face size and position to decide whether someone is seated in fron
 
 - A face qualifies when its bounding box covers at least **3.5% of the camera image** and its center is within **0.45 normalized units** of the image center.
 - **Two seconds** of continuous absence activates the veil.
-- **0.6 seconds** of continuous presence reveals the desktop.
+- **0.5 seconds** of continuous presence reveals the desktop.
 - Brief detection dropouts are absorbed by the confirmation timers.
 - Interrupted camera data resets the confirmation timers. An active veil remains visible until presence returns or a reveal shortcut is used.
 
@@ -114,7 +114,7 @@ Edit `config.py` to adjust the defaults:
 | `FRAME_WIDTH` / `FRAME_HEIGHT` | `640` / `360` | Requested camera resolution |
 | `INFERENCE_FPS` | `5` | Face-inference frequency |
 | `AWAY_CONFIRM_TIME` | `2.0` | Departure confirmation, in seconds |
-| `RETURN_CONFIRM_TIME` | `0.6` | Return confirmation, in seconds |
+| `RETURN_CONFIRM_TIME` | `0.5` | Return confirmation, in seconds |
 | `MIN_RETURN_FACE_RATIO` | `0.035` | Minimum face area relative to the camera image |
 | `MAX_RETURN_CENTER_DISTANCE` | `0.45` | Maximum normalized distance from image center |
 | `VEIL_FADE_MS` | `200` | Automatic transition duration |

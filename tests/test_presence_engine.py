@@ -41,7 +41,9 @@ class PresenceTests(unittest.TestCase):
         self.samples(True, 2.2, 2.6)
         self.assertEqual(self.engine.state, State.PENDING_RETURN)
         self.assertTrue(self.engine.covered)
-        self.engine.update(True, 2.8)
+        self.engine.update(True, 2.69)
+        self.assertEqual(self.engine.state, State.PENDING_RETURN)
+        self.engine.update(True, 2.7)
         self.assertEqual(self.engine.state, State.PRESENT)
 
     def test_camera_failure_not_absence(self):
