@@ -58,7 +58,7 @@ Left-click or right-click the tray icon to open the menu.
 | Camera Preview | Show the live camera image and face boxes for positioning. |
 | Exit | Reveal the desktop and close DeskVeil. |
 
-The enable toggle applies to the current session. While disabled, manual cover and camera preview are inactive.
+Unchecking the enable toggle pauses monitoring while DeskVeil stays in the tray. Check it again to resume; Exit closes the application. The enable toggle applies to the current session. While disabled, manual cover and camera preview are inactive.
 
 | Shortcut | Action |
 | --- | --- |
@@ -67,7 +67,7 @@ The enable toggle applies to the current session. While disabled, manual cover a
 
 On the visible desktop, Ctrl + V retains its normal paste behavior. Both reveal shortcuts act immediately.
 
-Tray colors indicate the current state: **teal** for monitoring, **gray** for paused or disabled, and **amber** while waiting for camera or model data.
+Tray colors indicate the current state: **teal** for monitoring, **teal with an amber pause mark** for paused or disabled, and **amber** while waiting for camera or model data.
 
 ## Presence detection
 

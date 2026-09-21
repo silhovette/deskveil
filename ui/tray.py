@@ -14,11 +14,9 @@ class Tray(QSystemTrayIcon):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.icons = {name: QIcon(str(config.resource_path("assets/" + name)))
+                      for name in ("tray.svg", "tray_disabled.svg", "tray_error.svg")}
         self.menu = QMenu()
-        self.menu.addAction("DeskVeil").setEnabled(False)
-        self.status_action = self.menu.addAction("Monitoring: Starting…")
-        self.status_action.setEnabled(False)
-        self.menu.addSeparator()
         self.enabled_action = self.menu.addAction("启用 DeskVeil")
         self.enabled_action.setCheckable(True)
         self.enabled_action.setChecked(True)
@@ -42,9 +40,8 @@ class Tray(QSystemTrayIcon):
 
     def set_status(self, text, snoozed=False, error=False, enabled=True):
         asset = "tray_error.svg" if error else "tray_disabled.svg" if snoozed or not enabled else "tray.svg"
-        self.setIcon(QIcon(str(config.resource_path("assets/" + asset))))
+        self.setIcon(self.icons[asset])
         self.setToolTip("DeskVeil · " + text + "\nReveal while covered: Ctrl + V\nReveal + snooze: Ctrl + Alt + Shift + V")
-        self.status_action.setText("Monitoring: " + text)
         self.enabled_action.setChecked(enabled)
         self.cover_action.setEnabled(enabled)
         self.preview_action.setEnabled(enabled)

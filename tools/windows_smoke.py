@@ -151,7 +151,8 @@ def run():
         assert not controller.enabled
         assert not controller.engine.covered
         assert controller.veils.cursor.hook is None
-        assert controller.tray.status_action.text() == "Monitoring: Off"
+        assert controller.tray.toolTip().startswith("DeskVeil · Paused")
+        assert controller.tray.isVisible() and not controller.closing
         controller.worker.sample = ((), time.monotonic(), controller.generation)
         controller.poll()
         controller.cover_now()

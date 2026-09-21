@@ -139,7 +139,7 @@ class Controller(QObject):
         error = self.enabled and not snoozed and ("unavailable" in self.camera_status or
                                 now - reference > config.MAX_SAMPLE_GAP)
         if not self.enabled:
-            text = "Off"
+            text = "Paused"
         elif snoozed:
             remaining = max(0, int(self.engine.snoozed_until - now + .999))
             text = f"Snoozed · {remaining // 60}:{remaining % 60:02d}"
@@ -170,6 +170,10 @@ class Controller(QObject):
         self.veils.set_covered(False, immediate=True)
         self.start_monitoring(enabled)
         self.render()
+        # Pausing keeps the resident tray entry available for resuming.
+        self.tray.show()
+        logging.getLogger("deskveil").info("Tray monitoring %s; application remains running",
+                                          "resumed" if enabled else "paused")
 
     def cover_now(self):
         if self.closing or not self.enabled:
