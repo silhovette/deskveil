@@ -70,7 +70,7 @@ void main() {
     float r = length(p)/outline;
     if (r >= 1.) discard;
     float cap = pow(max(0.,1.-r*r), .62);
-    float height = cap * min(radii.x,radii.y) * .48 * material.z;
+    float height = cap * min(radii.x,radii.y) * .62 * material.z;
     // One coherent lens when neighboring lobes touch or droplets merge.
     if (material.y < -.5) {
         // Pinned water is masked only after all swept paths have combined.
@@ -123,10 +123,10 @@ void main() {
     float up = waterHeight(pane-vec2(0.,fieldTexel.y));
     vec3 n = normalize(vec3((left-right)*pixelRatio*1.15,
                             (up-down)*pixelRatio*1.15, 1.));
-    float contact = smoothstep(.014,.10,h);
+    float contact = smoothstep(.010,.075,h);
     // Only the final privacy-safe image is bound here. Film height and normals
     // change refraction, never blur strength or access to the original desktop.
-    vec2 displacement = n.xy*(3.+min(h,8.)*5.)/viewport*surfaceScale;
+    vec2 displacement = n.xy*(4.+min(h,8.)*7.)/viewport*surfaceScale;
     vec3 lens = texture2D(frosted,clamp(uv+displacement,vec2(0.),vec2(1.))).rgb * .85;
     lens = mix(lens,vec3(1.),mist);
     vec3 light = normalize(vec3(-.38,-.54,.75));
@@ -135,7 +135,7 @@ void main() {
     float side = pow(max(0.,dot(n,normalize(vec3(-.60,-.12,.79)))),24.);
     float shoulder = pow(facing,7.);
     float meniscus = (1.-n.z)*max(0.,dot(n.xy,normalize(vec2(-.48,-.68))));
-    float shade = .84 + .16*n.z - max(0.,n.y)*.10;
+    float shade = .78 + .22*n.z - max(0.,n.y)*.12;
     // Remove the trail's thin specular line; retain highlights on water drops.
     float trail = smoothstep(.02,.15,film.g)*(1.-smoothstep(.01,.08,film.b));
     float highlight = 1.-trail;
