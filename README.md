@@ -9,6 +9,7 @@ DeskVeil automatically covers every display with live frosted glass when you ste
 - **Automatic presence detection** with local MediaPipe face tracking.
 - **All-display coverage**, including the taskbar and newly connected monitors.
 - **Live frosted glass** that follows changing windows and playing videos.
+- **Optional Rain skin** with clustered condensation, irregular water lenses, and wandering rivulets.
 - **Smooth 200 ms transitions** with high-precision color blending and fine, stationary dithering.
 - **Mouse and touchpad input suppression** with a hidden pointer while covered.
 - **Tray controls** available through either left-click or right-click.
@@ -56,6 +57,7 @@ Left-click or right-click the tray icon to open the menu.
 | Snooze for 10 min | Reveal the desktop and pause monitoring for ten minutes. |
 | Resume Monitoring | Resume immediately with a fresh presence timer. |
 | Camera Preview | Show the live camera image and face boxes for positioning. |
+| Appearance → Rain | Toggle the wet-glass skin on every display. The selection is remembered. |
 | Exit | Reveal the desktop and close DeskVeil. |
 
 Unchecking the enable toggle pauses monitoring while DeskVeil stays in the tray. Check it again to resume; Exit closes the application. The enable toggle applies to the current session. While disabled, manual cover and camera preview are inactive.
@@ -73,7 +75,7 @@ Tray colors indicate the current state: **teal** for monitoring, **teal with an 
 
 DeskVeil uses face size and position to decide whether someone is seated in front of the computer.
 
-- A face qualifies when its bounding box covers at least **3.5% of the camera image** and its center is within **0.45 normalized units** of the image center.
+- A face qualifies when its bounding box covers at least **3% of the camera image** and its center is within **0.35 normalized units** of the image center.
 - **Two seconds** of continuous absence activates the veil.
 - **0.5 seconds** of continuous presence reveals the desktop.
 - Brief detection dropouts are absorbed by the confirmation timers.
@@ -104,6 +106,22 @@ Capture, blur, and composition run in a background worker. The rendering pipelin
 
 The target refresh rate is **30 FPS**, with throughput depending on display resolution and hardware. Capture stops when the veil is dismissed. The fixed dither pattern gives dark gradients a fine texture while remaining stable across frames.
 
+### Rain appearance
+
+Choose **Appearance → Rain** in the tray menu. Rain starts off by default and the preference is saved for future launches. It applies to every monitor, including displays connected while covered. Turning it off restores the original frosted material immediately.
+
+Fine condensation gathers in distinct wet islands separated by sparse and nearly blank glass. Large and small attached drops use ordinary overlap spacing, with no extra cleared halo around large drops. Bead opacity, refraction strength, highlights, and edge shading vary with size and per-drop material, while larger lenses carry a gently asymmetric merged-water shape. A fresh layout contains only stationary beads, with no prefilled trails. After a short delay, runners enter individually from above at irregular intervals (roughly 1.4–2.9 seconds during normal animation), up to eight at a time. They stretch, pause, slide, and collect nearby water; cleared paths form only where they actually pass. Each monitor has an independent distribution. The glass is already wet when it appears, and the whole surface follows the existing veil fade.
+
+Rain combines condensation, droplets, and trails into a floating-point water height field. Its surface normals produce consistent highlights, volume, and refraction over the **finished blurred, tinted, dithered surface**. Refraction samples only that processed image. The raw desktop capture is not available to the Rain renderer.
+
+The animation targets **60 FPS** independently of desktop capture and blur. Tens of thousands of condensation beads are baked into a GPU texture once per surface size. A small CPU simulation updates the larger drops and drainage history; the background texture is uploaded only when a new processed frame arrives. Reveal, snooze, disabling DeskVeil, and Exit stop animation and release the background texture. OpenGL initialization failures return to the normal frosted veil.
+
+Enabling Rain prepares the synthetic water layout on a background worker while the desktop is still uncovered. This preparation does not capture the desktop or run hidden animation. Each cover waits for its first rendered frame before beginning the fade, keeping initialization and texture uploads out of the transition. Rain darkens the processed background to 85% brightness while preserving droplet highlights. The paired dark edges along falling trails render at 60% of their original strength.
+
+A pure-white film at 98% transparency sits between the acrylic and the droplets. Falling drops enter from above the visible pane, including replacement drops. Each runner retains its own speed factor through releases and collection, so slow and fast drops coexist; stationary beads never start moving in place. Initial spacing relaxes both larger lenses and microbeads without removing or shrinking them. Moving drops wipe the film and stationary beads along their paths. Cleared areas linger for a few seconds, then gradually re-fog at locally varied rates as stationary beads reappear. This uses the existing water-field pass and only reveals the processed acrylic, never an unblurred desktop.
+
+Rain renders in a native child surface, while the veil keeps its original raster window. The GPU surface extends slightly beyond the parent and is clipped to it, keeping Windows desktop composition active during transitions. Physical-pixel texture coordinates preserve the original frosted image.
+
 ## Configuration
 
 Edit `config.py` to adjust the defaults:
@@ -115,8 +133,8 @@ Edit `config.py` to adjust the defaults:
 | `INFERENCE_FPS` | `5` | Face-inference frequency |
 | `AWAY_CONFIRM_TIME` | `2.0` | Departure confirmation, in seconds |
 | `RETURN_CONFIRM_TIME` | `0.5` | Return confirmation, in seconds |
-| `MIN_RETURN_FACE_RATIO` | `0.035` | Minimum face area relative to the camera image |
-| `MAX_RETURN_CENTER_DISTANCE` | `0.45` | Maximum normalized distance from image center |
+| `MIN_RETURN_FACE_RATIO` | `0.03` | Minimum face area relative to the camera image |
+| `MAX_RETURN_CENTER_DISTANCE` | `0.35` | Maximum normalized distance from image center |
 | `VEIL_FADE_MS` | `200` | Automatic transition duration |
 | `GLASS_FPS` | `30` | Target glass refresh rate |
 | `GLASS_MAX_EDGE` | `960` | Working blur resolution |
@@ -167,6 +185,12 @@ Additional tools exercise the actual Windows desktop and camera:
 | `tools/glass_quality.py` | Synthetic gradient comparison of the previous and current materials |
 | `tools/glass_compute_benchmark.py` | Pixel comparison and blur-processing timings |
 | `tools/glass_performance.py` | Composition updates, painting, animation intervals, and interface latency |
+| `tools/rain_preview.py --fullscreen` | Synthetic Rain study, physical-resolution GPU output, frame timing, and idle checks |
+| `tools/rain_smoke.py` | Rain toggles, automatic/manual cover, fades, shortcuts, capture exclusion, input blocking, and shutdown |
+| `tools/rain_transition_smoke.py` | Native presented-pixel checks for black flashes, fade steps, and unscaled background mapping |
+| `tools/rain_motion_smoke.py` | Simulation-clock and pixel-motion checks in first and repeated native covers |
+| `tools/rain_mist_smoke.py` | White-film opacity, erasure of stationary beads, and gradual recovery in the GPU output |
+| `tools/video_glass_smoke.py --rain` | Playing video beneath the Rain skin |
 
 Run desktop and camera integration tools with the regular DeskVeil instance closed. The coexistence tool uses the peeker build in the sibling `peeker` directory; the shared-camera test starts its own camera clients.
 
@@ -185,6 +209,10 @@ deskveil/
   config.py               Runtime defaults
   detection/              Camera sharing, face detection, presence state machine
   ui/                     Tray, preview, hotkeys, live glass rendering
+    rain.py               Optional GPU surface, animation clock, texture lifecycle
+    rain_shaders.py       Water height fields, surface normals, and lens shading
+    rain_simulation.py    Sparse droplet motion, collection, and surface tension
+    rain_surface.py       Moisture regions, clustered condensation, old rivulets
   assets/                 Icons
   models/                 MediaPipe model and source information
   tests/                  Automated tests

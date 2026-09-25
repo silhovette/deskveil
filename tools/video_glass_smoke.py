@@ -9,7 +9,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QEventLoop, QTimer
+from PySide6.QtCore import QEventLoop, QTimer, QEvent
 from ui.veil import VeilManager
 
 def wait_events(milliseconds):
@@ -42,6 +42,7 @@ def main():
         player.play()
         wait_events(700)
         manager = VeilManager(app)
+        manager.set_rain_enabled('--rain' in sys.argv)
         try:
             assert player.playbackState() == QMediaPlayer.PlaybackState.PlayingState, player.errorString()
             before = player.position()
@@ -67,6 +68,9 @@ def main():
             for screen in list(manager.windows):
                 manager.remove_screen(screen)
             app.processEvents()
+            # This script uses nested loops instead of app.exec(). Drain the
+            # deferred window/container destruction before QApplication dies.
+            app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 if __name__ == '__main__':

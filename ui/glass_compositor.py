@@ -36,10 +36,11 @@ class GlassCompositor:
         # single uniform thresholds can leave alternating smooth/grainy bands.
         tile = tile + np.roll(tile, (73, 119), axis=(0, 1))
         row = np.tile(tile, (1, (width + 255)//256))[:, :width]
-        self.noise = np.zeros((256, width, 4), dtype=np.uint16)
-        self.noise[:, :, :3] = row[:, :, None]
-        self.noise[:, :, 3] = 256
-        self.scratch = np.empty((64, width, 4), dtype=np.float32)
+        # Center once, rather than subtracting the bias over the whole display
+        # every frame. Signed thresholds allow a saturating uint16 addition.
+        self.noise = np.zeros((256, width, 4), dtype=np.int16)
+        self.noise[:, :, :3] = row[:, :, None].astype(np.int16) - 256
+        self.scratch = np.empty((64, width, 4), dtype=np.uint16)
 
     def clear(self):
         if not self.work.isNull():
@@ -71,9 +72,8 @@ class GlassCompositor:
             last = min(first + 64, height)
             scratch = self.scratch[:last-first]
             noise = self.noise[first % 256:first % 256 + last-first]
-            cv2.add(source[first:last], noise, dst=scratch, dtype=cv2.CV_32F)
-            cv2.subtract(scratch, (256, 256, 256, 256), dst=scratch)
-            cv2.max(scratch, 0, dst=scratch)
-            cv2.min(scratch, (65535, 65535, 65535, 65535), dst=scratch)
+            # Saturation clamps both black and white during the addition,
+            # eliminating float conversion and a separate full-image clamp.
+            cv2.add(source[first:last], noise, dst=scratch, dtype=cv2.CV_16U)
             cv2.convertScaleAbs(scratch, dst=output[first:last], alpha=1/257)
         return result

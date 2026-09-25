@@ -6,7 +6,7 @@ from scipy.spatial import cKDTree
 DROP_SCALE = 1.5
 
 
-def separate_beads(data, width, height, obstacles=None, passes=14):
+def separate_beads(data, width, height, obstacles=None, passes=28):
     """Locally relax crowded ellipses without removing or shrinking any beads.
 
     Runs only when baking a layout; the animation never does this work.
@@ -20,7 +20,7 @@ def separate_beads(data, width, height, obstacles=None, passes=14):
         xy = np.ascontiguousarray(shapes[:, :2], dtype=np.float32)
         if iteration % 2 == 0:
             tree = cKDTree(xy[:count])
-            _, neighbors = tree.query(xy[:count], k=min(12, count))
+            _, neighbors = tree.query(xy[:count], k=min(32, count))
             a = np.repeat(np.arange(count), neighbors.shape[1])
             b = neighbors.ravel()
             keep = a != b
@@ -154,3 +154,5 @@ class WetLayout:
                 current_width = width*(.78+.28*math.sin(y*.033+phase)+.10*math.sin(y*.127))
                 yield (*previous, nx, y, current_width, phase)
                 previous = (nx,y)
+
+

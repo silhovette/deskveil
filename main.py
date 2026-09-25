@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import sys
 import time
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Qt
+from PySide6.QtCore import QObject, QThread, QTimer, Signal, Qt, QSettings
 from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 import config
 from detection.camera_worker import CameraWorker
@@ -51,6 +51,10 @@ class Controller(QObject):
         self.preview = CameraPreview()
         self.preview.closed.connect(lambda: self.preview_requested.emit(False))
         self.tray = Tray(self)
+        self.settings = QSettings("DeskVeil", "DeskVeil")
+        self.tray.rain_requested.connect(self.set_rain_enabled)
+        self.veils.rain_failed.connect(lambda: self.set_rain_enabled(False))
+        self.set_rain_enabled(self.settings.value("appearance/rain", False, type=bool))
         self.tray.enabled_requested.connect(self.set_enabled)
         self.tray.cover_requested.connect(lambda: QTimer.singleShot(0, self.cover_now))
         self.tray.snooze_requested.connect(self.snooze)
@@ -76,6 +80,11 @@ class Controller(QObject):
         self.tray.show()
         self.start_monitoring(True)
         self.timer.start()
+
+    def set_rain_enabled(self, enabled):
+        self.tray.rain_action.setChecked(enabled)
+        self.veils.set_rain_enabled(enabled)
+        self.settings.setValue("appearance/rain", enabled)
 
     def start_monitoring(self, enabled):
         self.generation += 1

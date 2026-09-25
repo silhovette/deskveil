@@ -5,6 +5,18 @@ from ui.glass_compositor import GlassCompositor
 
 
 class CompositorTests(unittest.TestCase):
+    def test_quantization_matches_formula_for_all_16_bit_tones(self):
+        compositor = GlassCompositor()
+        # Cross both block and dither-tile boundaries, including a partial block.
+        compositor.prepare(257, 259)
+        work = np.frombuffer(compositor.work.bits(), np.uint16).reshape(259, 257, 4)
+        work[:] = np.arange(work.size, dtype=np.uint32).reshape(work.shape) % 65536
+        output = compositor.quantize()
+        actual = np.frombuffer(output.constBits(), np.uint8).reshape(work.shape)
+        noise = compositor.noise[np.arange(259) % 256]
+        expected = np.rint(np.clip(work.astype(np.float64) + noise, 0, 65535) / 257).astype(np.uint8)
+        np.testing.assert_array_equal(actual, expected)
+
     def test_fractional_dark_tone_survives_final_output_without_flicker(self):
         compositor = GlassCompositor()
         compositor.prepare(512, 256)

@@ -1,9 +1,10 @@
 import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import unittest
+from unittest.mock import patch
 from PySide6.QtCore import QObject, QRect, Signal, Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 from ui.veil import VeilManager, VeilWindow
 
 app = QApplication.instance() or QApplication([])
@@ -81,6 +82,63 @@ class VeilTests(unittest.TestCase):
         for window in self.manager.windows.values():
             self.assertFalse(window.isVisible())
             self.assertTrue(window.background.isNull())
+
+    def test_rain_propagates_to_hotplug_and_stops_on_remove_and_reveal(self):
+        # Native shader/lifecycle coverage lives in tools/rain_smoke.py. This
+        # substitutes only the GPU widget to exercise multi-screen routing on
+        # Qt's offscreen platform, which cannot create an OpenGL context.
+        class RainDouble(QWidget):
+            failed = Signal()
+            ready = Signal()
+
+            def __init__(self):
+                super().__init__()
+                self.active = False
+                self.presented = True
+
+            def start(self, surface):
+                self.active = True
+                self.show()
+
+            def prepare_layout(self):
+                pass
+
+            def cancel_preparation(self):
+                pass
+
+            def stop(self):
+                self.active = False
+                self.hide()
+
+            def context(self):
+                return None
+
+        def container(rain, parent):
+            rain.setParent(parent)
+            return rain
+
+        with patch('ui.rain.RainWindow', RainDouble), \
+                patch.object(QWidget, 'createWindowContainer', side_effect=container):
+            self.manager.set_rain_enabled(True)
+            self.assertTrue(all(not w.rain.active for w in self.manager.windows.values()))
+            self.manager.set_covered(True, immediate=True)
+            screen = Screen(QRect(1280, 0, 900, 600))
+            self.displays.screenAdded.emit(screen)
+            window = self.manager.windows[screen]
+            self.assertTrue(window.rain.active)
+            self.assertEqual(window.rain.geometry(), window.rect().adjusted(0, 0, 1, 1))
+            screen.rect = QRect(1280, 0, 1000, 700)
+            screen.geometryChanged.emit(screen.rect)
+            self.assertEqual(window.rain.geometry(), window.rect().adjusted(0, 0, 1, 1))
+            self.manager.set_rain_enabled(False)
+            self.assertTrue(all(w.isVisible() and not w.rain.active for w in self.manager.windows.values()))
+            self.assertTrue(self.manager.covered)
+            self.manager.set_rain_enabled(True)
+            self.assertTrue(all(w.rain.active for w in self.manager.windows.values()))
+            self.displays.screenRemoved.emit(screen)
+            self.assertFalse(window.rain.active)
+            self.manager.set_covered(False, immediate=True)
+            self.assertTrue(all(not w.rain.active for w in self.manager.windows.values()))
 
 
 if __name__ == "__main__":

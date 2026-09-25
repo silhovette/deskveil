@@ -11,6 +11,7 @@ class Tray(QSystemTrayIcon):
     resume_requested = Signal()
     preview_requested = Signal()
     exit_requested = Signal()
+    rain_requested = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -26,6 +27,10 @@ class Tray(QSystemTrayIcon):
         self.resume_action = self.menu.addAction("Resume Monitoring", self.resume_requested.emit)
         self.resume_action.setVisible(False)
         self.preview_action = self.menu.addAction("Camera Preview", self.preview_requested.emit)
+        self.appearance_menu = self.menu.addMenu("Appearance")
+        self.rain_action = self.appearance_menu.addAction("Rain")
+        self.rain_action.setCheckable(True)
+        self.rain_action.triggered.connect(lambda checked: self.rain_requested.emit(checked))
         self.menu.addSeparator()
         self.menu.addAction("Exit", self.exit_requested.emit)
         self.setContextMenu(self.menu)
